@@ -38,7 +38,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="C:\Users\rtpn2\OneDrive - Seattle University\Desktop\Desktop\gold-folio\gold-folio-env"
+VIRTUAL_ENV="C:\Users\rtpn2\Projects\gold-folio\gold-folio-env"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"

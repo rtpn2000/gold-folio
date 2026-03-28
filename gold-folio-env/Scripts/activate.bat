@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=C:\Users\rtpn2\OneDrive - Seattle University\Desktop\Desktop\gold-folio\gold-folio-env
+set VIRTUAL_ENV=C:\Users\rtpn2\Projects\gold-folio\gold-folio-env
 
 if not defined PROMPT set PROMPT=$P$G
 
