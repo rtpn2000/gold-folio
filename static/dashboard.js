@@ -103,7 +103,7 @@ async function loadHistory() {
   renderTable(data.items);
 }
 
-// Loads the ARIMA forecast if a trained model artifact exists.
+// Loads the forecast shown in the dashboard.
 async function loadForecast() {
   const result = await fetchJson("/api/forecast?days=30");
   const status = document.getElementById("forecastStatus");
@@ -114,7 +114,11 @@ async function loadForecast() {
     return;
   }
 
-  status.textContent = "Forecast generated from the saved ARIMA model artifact.";
+  if (result.method === "moving_average_7d") {
+    status.textContent = "Forecast generated using the stronger 7-day moving-average baseline.";
+  } else {
+    status.textContent = `Forecast generated using ${result.method || "the current model"}.`;
+  }
   drawLineChart(
     document.getElementById("forecastChart"),
     result.items.map((item) => ({ label: item.date, value: item.price })),
