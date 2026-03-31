@@ -150,9 +150,9 @@ def api_history(
 @app.get("/api/forecast")
 def api_forecast(days: int = Query(default=30, ge=1, le=180)):
     result = forecast(days=days)
-    if isinstance(result, dict) and result.get("error"):
-        return {"items": [], "error": result["error"]}
-    return {"items": result, "error": None}
+    if result.get("error"):
+        return {"items": [], "error": result["error"], "method": None}
+    return result
 
 
 if __name__ == "__main__":
