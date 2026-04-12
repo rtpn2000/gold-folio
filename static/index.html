@@ -3,130 +3,92 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gold Folio Dashboard</title>
-  <link rel="stylesheet" href="/static/dashboard.css">
+  <title>Metal Folio</title>
+  <link rel="stylesheet" href="/static/dashboard.css?v=4">
 </head>
 <body>
-  <div class="page-shell">
-    <!-- Top navigation / header bar -->
-    <header class="top-bar">
-      <div class="brand-block">
-        <p class="eyebrow">Gold Folio</p>
-        <h1 class="brand-title">Market dashboard</h1>
-      </div>
-      <nav class="top-nav" aria-label="Dashboard sections">
-        <a href="#overview">Overview</a>
-        <a href="#history">History</a>
-        <a href="#forecast">Forecast</a>
-        <a href="#records">Records</a>
-      </nav>
-      <div class="top-bar-actions">
-        <button id="refreshButton" class="primary-button" type="button">Refresh Aggregation</button>
-      </div>
-    </header>
+  <div class="chrome-shell chrome-shell-top">
+    <div class="chrome-inner">
+      <header class="top-bar">
+        <div class="brand-block">
+          <div class="brand-mark">$</div>
+          <div>
+            <h1 class="brand-title">Metal Folio</h1>
+          </div>
+        </div>
+        <div class="top-bar-actions">
+          <button id="refreshButton" class="primary-button" type="button">Refresh Aggregation</button>
+        </div>
+      </header>
+    </div>
+  </div>
 
-    <!-- Hero copy for the dashboard -->
-    <section class="hero">
-      <div>
-        <p class="eyebrow">Gold insights</p>
-        <h2>Live gold pricing at a glance.</h2>
-        <p class="hero-copy">Track stored price history, compare daily movement, and preview ARIMA-based forecasts from the same FastAPI app.</p>
+  <div class="page-shell">
+    <section id="overview" class="hero-card">
+      <div class="hero-copy-block">
+        <div class="hero-metrics hero-metrics-split">
+          <div class="hero-price-stack hero-price-panel">
+            <span class="hero-price-label">USD / gram</span>
+            <strong id="usdPrice" class="hero-price">--</strong>
+            <div class="hero-change-pill" id="usdChange">No change data yet</div>
+          </div>
+          <div class="hero-price-stack hero-price-panel hero-price-panel-secondary">
+            <span class="hero-price-label">INR / gram</span>
+            <strong id="inrPrice" class="hero-price hero-price-secondary">--</strong>
+            <div class="hero-change-pill" id="inrChange">No change data yet</div>
+          </div>
+        </div>
       </div>
-      <div class="hero-actions">
-        <p id="refreshStatus" class="muted-text">Waiting for latest sync.</p>
+      <div class="hero-symbol-card">
+        <div class="hero-symbol">Au</div>
       </div>
     </section>
 
-    <!-- Main dashboard content -->
     <main class="dashboard-grid">
-      <!-- Summary cards -->
-      <section id="overview" class="card span-3">
-        <p class="section-label">Overview</p>
-        <div class="metric-grid">
-          <article class="metric-card">
-            <span>Latest USD / gram</span>
-            <strong id="usdPrice">--</strong>
-            <small id="usdChange">No change data yet</small>
-          </article>
-          <article class="metric-card">
-            <span>Latest INR / gram</span>
-            <strong id="inrPrice">--</strong>
-            <small id="inrChange">No change data yet</small>
-          </article>
-          <article class="metric-card">
-            <span>Stored observations</span>
-            <strong id="historyCount">0</strong>
-            <small id="latestDate">No records loaded</small>
-          </article>
-        </div>
-      </section>
-
-      <!-- Historical price chart -->
-      <section id="history" class="card chart-card span-2">
+      <section id="history" class="card chart-card chart-main">
         <div class="card-header">
           <div>
-            <p class="section-label">History</p>
-            <h2>USD price trend</h2>
+            <p class="section-label">Price Trend</p>
+            <h2>USD historical performance</h2>
           </div>
           <label class="pill-select">
             <span>Window</span>
             <select id="historyWindow">
-              <option value="30">30d</option>
-              <option value="90" selected>90d</option>
-              <option value="180">180d</option>
-              <option value="365">365d</option>
+              <option value="30">30D</option>
+              <option value="90" selected>90D</option>
+              <option value="180">180D</option>
+              <option value="365">365D</option>
             </select>
           </label>
         </div>
-        <div class="chart-frame">
+        <div class="chart-frame chart-frame-large">
           <svg id="historyChart" viewBox="0 0 800 320" preserveAspectRatio="none" aria-label="Historical gold price chart"></svg>
         </div>
       </section>
 
-      <!-- Forecast chart -->
-      <section id="forecast" class="card chart-card">
+      <section id="forecast" class="card forecast-panel">
         <div class="card-header">
           <div>
             <p class="section-label">Forecast</p>
-            <h2>Next 30 days</h2>
+            <h2>Upcoming prices</h2>
           </div>
         </div>
-        <div class="chart-frame compact">
-          <svg id="forecastChart" viewBox="0 0 400 320" preserveAspectRatio="none" aria-label="Forecast chart"></svg>
-        </div>
-        <p id="forecastStatus" class="muted-text">Model forecast loading.</p>
-      </section>
-
-      <!-- Recent records table -->
-      <section id="records" class="card span-3">
-        <div class="card-header">
-          <div>
-            <p class="section-label">Recent records</p>
-            <h2>Stored daily prices</h2>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>USD / gram</th>
-                <th>INR / gram</th>
-              </tr>
-            </thead>
-            <tbody id="historyTable"></tbody>
-          </table>
-        </div>
+        <p id="forecastStatus" class="muted-text forecast-intro">Loading forecast data.</p>
+        <div id="forecastCards" class="forecast-cards"></div>
       </section>
     </main>
-
-    <!-- Footer for attribution / app context -->
-    <footer class="page-footer">
-      <p>Gold Folio dashboard built on FastAPI with stored market history and ARIMA forecasting.</p>
-      <p class="muted-text">Use the refresh action to fetch the latest gold pricing and update the dashboard.</p>
-    </footer>
   </div>
 
-  <script src="/static/dashboard.js" defer></script>
+  <div class="chrome-shell chrome-shell-bottom">
+    <div class="chrome-inner">
+      <footer class="page-footer">
+        <p class="footer-line-primary">© Metal Folio</p>
+        <p class="footer-line-secondary muted-text">Data sourced from market providers. Forecasts are for informational purposes only and not financial advice.</p>
+      </footer>
+    </div>
+  </div>
+
+  <div id="chartTooltip" class="chart-tooltip" aria-hidden="true"></div>
+  <script src="/static/dashboard.js?v=5" defer></script>
 </body>
 </html>

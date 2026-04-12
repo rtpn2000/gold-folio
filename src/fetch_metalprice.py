@@ -1,18 +1,14 @@
-# Fetches the current price of gold in 'INR' from MetalpriceAPI!
-# Delayed by 24 hours, so for benchmarking and historical data.
-
 import requests
 from datetime import datetime
-from config import metalprice_api_key, ounce_to_g 
+from config import metalprice_api_key, ounce_to_g
+from src.fetch_yfinance import fetch_usd_inr_rate
 
-def fetch_metalprice(api_key = metalprice_api_key):
-
-    # Fetches latest gold price from MetalpriceAPI and converts to per gram in INR.
+def fetch_metalprice(api_key=metalprice_api_key):
     url = "https://api.metalpriceapi.com/v1/latest"
     params = {
         "api_key": api_key,
         "base": "USD",
-        "currencies": "INR,XAU"
+        "currencies": "XAU"
     }
 
     response = requests.get(url, params=params, timeout=10)
@@ -20,15 +16,13 @@ def fetch_metalprice(api_key = metalprice_api_key):
     data = response.json()
 
     rates = data.get("rates", {})
-
-    usd_inr = rates.get("INR")
     xau_rate = rates.get("XAU")
 
-    # Check - If required rates are missing!
-    if not usd_inr or not xau_rate:
-        raise ValueError("MetalPriceAPI missing required rates")
+    if not xau_rate:
+        raise ValueError("MetalPriceAPI missing XAU rate")
 
-    # Conversion.
+    usd_inr = fetch_usd_inr_rate()
+
     gold_usd_per_ounce = 1 / xau_rate
     gold_usd_per_gram = gold_usd_per_ounce / ounce_to_g
     gold_inr_per_gram = gold_usd_per_gram * usd_inr
@@ -41,7 +35,5 @@ def fetch_metalprice(api_key = metalprice_api_key):
         "timestamp": datetime.utcnow().isoformat() + "Z"
     }
 
-
-# Printing for debugging.
 if __name__ == "__main__":
     print(fetch_metalprice())

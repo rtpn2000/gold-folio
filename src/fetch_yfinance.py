@@ -18,7 +18,7 @@ def fetch_yfinance():
     gold_usd_per_ounce = gold_data["Close"].iloc[-1]
 
     # USD to INR rate!
-    usd_inr = yf.Ticker("INR=X").history(period="1d")["Close"].iloc[-1]
+    usd_inr = fetch_usd_inr_rate()
 
     gold_usd_per_gram = gold_usd_per_ounce / ounce_to_g
     gold_inr_per_gram = gold_usd_per_gram * usd_inr
@@ -31,7 +31,13 @@ def fetch_yfinance():
         "timestamp": datetime.utcnow().isoformat() + "Z"
     }
 
+def fetch_usd_inr_rate():
+    fx_data = yf.Ticker("INR=X").history(period="1d")
+    if fx_data.empty:
+        raise ValueError("Yahoo Finance USD/INR data unavailable")
+    return float(fx_data["Close"].iloc[-1])
 
 # Debug
-data = fetch_yfinance()
-print("Yahoo Gold:", data)
+if __name__ == "__main__":
+    data = fetch_yfinance()
+    print("Yahoo Gold:", data)
