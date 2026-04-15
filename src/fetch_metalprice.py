@@ -3,12 +3,18 @@ from datetime import datetime
 from config import metalprice_api_key, ounce_to_g
 from src.fetch_yfinance import fetch_usd_inr_rate
 
-def fetch_metalprice(api_key=metalprice_api_key):
+SUPPORTED_METALS = {"XAU", "XAG", "XPT"}
+
+def fetch_metalprice(symbol="XAU", api_key=metalprice_api_key):
+    symbol = symbol.upper()
+    if symbol not in SUPPORTED_METALS:
+        raise ValueError(f"Unsupported metal symbol: {symbol}")
+
     url = "https://api.metalpriceapi.com/v1/latest"
     params = {
         "api_key": api_key,
         "base": "USD",
-        "currencies": "XAU"
+        "currencies": symbol,
     }
 
     response = requests.get(url, params=params, timeout=10)
@@ -16,23 +22,22 @@ def fetch_metalprice(api_key=metalprice_api_key):
     data = response.json()
 
     rates = data.get("rates", {})
-    xau_rate = rates.get("XAU")
+    rate = rates.get(symbol)
 
-    if not xau_rate:
-        raise ValueError("MetalPriceAPI missing XAU rate")
+    if not rate:
+        raise ValueError(f"MetalPriceAPI missing {symbol} rate")
 
     usd_inr = fetch_usd_inr_rate()
-
-    gold_usd_per_ounce = 1 / xau_rate
-    gold_usd_per_gram = gold_usd_per_ounce / ounce_to_g
-    gold_inr_per_gram = gold_usd_per_gram * usd_inr
+    metal_usd_per_ounce = 1 / rate
+    metal_usd_per_gram = metal_usd_per_ounce / ounce_to_g
+    metal_inr_per_gram = metal_usd_per_gram * usd_inr
 
     return {
-        "price_per_gram_inr": round(gold_inr_per_gram, 2),
-        "price_per_gram_usd": round(gold_usd_per_gram, 2),
+        "price_per_gram_inr": round(metal_inr_per_gram, 2),
+        "price_per_gram_usd": round(metal_usd_per_gram, 2),
         "usd_inr_rate": round(usd_inr, 2),
-        "source": "metalpriceapi",
-        "timestamp": datetime.utcnow().isoformat() + "Z"
+        "source": f"metalpriceapi-{symbol}",
+        "timestamp": datetime.utcnow().isoformat() + "Z",
     }
 
 if __name__ == "__main__":

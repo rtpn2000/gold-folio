@@ -1,34 +1,40 @@
-# Predicts the current gold price in USD and INR using Yahoo Finance data!
+# Predicts the current metal price in USD and INR using Yahoo Finance data!
 
 import yfinance as yf
 from datetime import datetime
 
-# Retrieves price in USD per troy ounce, so we need to convert it to price per gram. - Gold OZ differs.
+# Retrieves price in USD per troy ounce, so we need to convert it to price per gram.
 ounce_to_g = 31.1034768
+METAL_TICKERS = {
+    "XAU": "GC=F",
+    "XAG": "SI=F",
+    "XPT": "PL=F",
+}
 
-def fetch_yfinance():
-    # Fetch gold futures.
-    gold = yf.Ticker("GC=F")
-    gold_data = gold.history(period="1d")
+def fetch_yfinance(symbol="XAU"):
+    symbol = symbol.upper()
+    ticker = METAL_TICKERS.get(symbol)
+    if not ticker:
+        raise ValueError(f"Unsupported metal symbol: {symbol}")
 
-    # Check - If required rates are missing!
-    if gold_data.empty:
-        raise ValueError("Yahoo Finance gold data unavailable")
+    metal = yf.Ticker(ticker)
+    metal_data = metal.history(period="1d")
 
-    gold_usd_per_ounce = gold_data["Close"].iloc[-1]
+    if metal_data.empty:
+        raise ValueError(f"Yahoo Finance data unavailable for {symbol}")
 
-    # USD to INR rate!
+    metal_usd_per_ounce = metal_data["Close"].iloc[-1]
     usd_inr = fetch_usd_inr_rate()
 
-    gold_usd_per_gram = gold_usd_per_ounce / ounce_to_g
-    gold_inr_per_gram = gold_usd_per_gram * usd_inr
+    metal_usd_per_gram = metal_usd_per_ounce / ounce_to_g
+    metal_inr_per_gram = metal_usd_per_gram * usd_inr
 
     return {
-        "price_per_gram_usd": round(gold_usd_per_gram, 2),
-        "price_per_gram_inr": round(gold_inr_per_gram, 2),
+        "price_per_gram_usd": round(metal_usd_per_gram, 2),
+        "price_per_gram_inr": round(metal_inr_per_gram, 2),
         "usd_inr_rate": round(usd_inr, 2),
-        "source": "yahoo-finance",
-        "timestamp": datetime.utcnow().isoformat() + "Z"
+        "source": f"yahoo-finance-{symbol}",
+        "timestamp": datetime.utcnow().isoformat() + "Z",
     }
 
 def fetch_usd_inr_rate():

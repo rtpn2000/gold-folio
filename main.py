@@ -3,8 +3,9 @@ from decimal import Decimal
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
 from agg import aggregate_gold_prices
@@ -16,6 +17,21 @@ from src.predict import forecast
 
 app = FastAPI(title="Gold Dashboard API")
 Base.metadata.create_all(bind=engine)
+
+
+def ensure_symbol_column():
+    inspector = inspect(engine)
+    if "gold_prices" not in inspector.get_table_names():
+        return
+
+    columns = [col["name"] for col in inspector.get_columns("gold_prices")]
+    if "symbol" not in columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE gold_prices ADD COLUMN symbol VARCHAR(6) NOT NULL DEFAULT 'XAU'"))
+            conn.execute(text("ALTER TABLE gold_prices ALTER COLUMN symbol DROP DEFAULT"))
+
+
+ensure_symbol_column()
 
 BASE_DIR = Path(__file__).resolve().parent
 DASHBOARD_PATH = BASE_DIR / "static" / "index.html"
@@ -42,13 +58,14 @@ def to_float(value):
 def serialize_price(row):
     return {
         "date": row.date.isoformat(),
+        "symbol": getattr(row, "symbol", "XAU"),
         "price_per_gram_usd": to_float(row.price_per_gram_usd),
         "price_per_gram_inr": to_float(row.price_per_gram_inr),
         "created_at": row.created_at.isoformat() if row.created_at else None,
     }
 
 
-def normalize_records(payload):
+def normalize_records(payload, symbol="XAU"):
     if not isinstance(payload, dict):
         return []
 
@@ -74,6 +91,7 @@ def normalize_records(payload):
 
     return [{
         "date": day,
+        "symbol": symbol.upper(),
         "price_per_gram_usd": usd_price,
         "price_per_gram_inr": inr_price,
     }]
@@ -88,21 +106,77 @@ def root():
 def dashboard():
     if not DASHBOARD_PATH.exists():
         raise HTTPException(status_code=404, detail="Dashboard file not found.")
-    return FileResponse(DASHBOARD_PATH)
+    return FileResponse(
+        DASHBOARD_PATH,
+        headers={"Cache-Control": "no-store, max-age=0"},
+    )
+
+
+@app.get("/about")
+def about_page():
+    html = """
+<!DOCTYPE html>
+<html lang=\"en\">
+<head>
+  <meta charset=\"UTF-8\">
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+  <title>About Metal Folio</title>
+  <link rel=\"stylesheet\" href=\"/static/dashboard.css?v=6\">
+</head>
+<body>
+  <div class=\"chrome-shell chrome-shell-top\">
+    <div class=\"chrome-inner\">
+      <header class=\"top-bar\">
+        <div class=\"brand-block\">
+          <div class=\"brand-mark\">$</div>
+          <div>
+            <h1 class=\"brand-title\">Metal Folio</h1>
+          </div>
+        </div>
+        <div class=\"top-bar-actions\">
+          <a href=\"/dashboard\" class=\"secondary-button\">Dashboard</a>
+          <a href=\"/about\" class=\"primary-button\">About</a>
+        </div>
+      </header>
+    </div>
+  </div>
+
+  <div class=\"page-shell\">
+    <section class=\"card about-panel\">
+      <div class=\"card-header\">
+        <div>
+          <p class=\"section-label\">About</p>
+          <h2>Metal Folio</h2>
+        </div>
+      </div>
+      <p class=\"about-text\">Metal Folio is a personal project built to track and visualize metal prices for gold, silver, and platinum. It is designed for informational purposes only and is not financial advice.</p>
+      <p class=\"about-text\">The application aggregates market data from external price APIs, stores daily price history, and renders trend and forecast views in USD and INR.</p>
+      <p class=\"about-text\"><strong>Author:</strong> Your Name<br><strong>Project Type:</strong> Personal informational dashboard<br><strong>Built with:</strong> FastAPI, SQLAlchemy, PostgreSQL, vanilla HTML/CSS/JS</p>
+      <p class=\"about-text\">This project is intended as a learning and reference tool. Please verify pricing independently before making any decisions.</p>
+    </section>
+  </div>
+</body>
+</html>
+    """
+    return HTMLResponse(content=html, headers={"Cache-Control": "no-store, max-age=0"})
 
 
 @app.get("/aggregate")
-def run_aggregation(db: Session = Depends(get_db)):
-    data = aggregate_gold_prices()
+def run_aggregation(
+    symbol: str = Query(default="XAU", pattern="^(XAU|XAG|XPT)$"),
+    db: Session = Depends(get_db),
+):
+    symbol = symbol.upper()
+    data = aggregate_gold_prices(symbol=symbol)
     if data.get("error"):
         raise HTTPException(status_code=502, detail=data["error"])
 
-    records = normalize_records(data)
+    records = normalize_records(data, symbol=symbol)
     if not records:
         raise HTTPException(status_code=500, detail="Aggregation returned no usable records.")
 
     rows = upsert_gold_prices(db, records)
-    latest = get_latest_price(db)
+    latest = get_latest_price(db, symbol=symbol)
 
     return {
         "message": "Saved to DB",
@@ -113,8 +187,12 @@ def run_aggregation(db: Session = Depends(get_db)):
 
 
 @app.get("/api/summary")
-def api_summary(db: Session = Depends(get_db)):
-    history = list(reversed(get_history(db, days=365)))
+def api_summary(
+    symbol: str = Query(default="XAU", pattern="^(XAU|XAG|XPT)$"),
+    db: Session = Depends(get_db),
+):
+    symbol = symbol.upper()
+    history = list(reversed(get_history(db, days=365, symbol=symbol)))
     latest = history[-1] if history else None
     previous = history[-2] if len(history) > 1 else None
 
@@ -141,15 +219,21 @@ def api_summary(db: Session = Depends(get_db)):
 @app.get("/api/history")
 def api_history(
     days: int = Query(default=90, ge=1, le=3650),
+    symbol: str = Query(default="XAU", pattern="^(XAU|XAG|XPT)$"),
     db: Session = Depends(get_db),
 ):
-    history = list(reversed(get_history(db, days=days)))
+    symbol = symbol.upper()
+    history = list(reversed(get_history(db, days=days, symbol=symbol)))
     return {"items": [serialize_price(row) for row in history]}
 
 
 @app.get("/api/forecast")
-def api_forecast(days: int = Query(default=30, ge=1, le=180)):
-    result = forecast(days=days)
+def api_forecast(
+    days: int = Query(default=30, ge=1, le=180),
+    symbol: str = Query(default="XAU", pattern="^(XAU|XAG|XPT)$"),
+):
+    symbol = symbol.upper()
+    result = forecast(days=days, symbol=symbol)
     if result.get("error"):
         return {"items": [], "error": result["error"], "method": None}
     return result
