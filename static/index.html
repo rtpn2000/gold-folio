@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Metal Folio</title>
-  <link rel="stylesheet" href="/static/dashboard.css?v=4">
+  <link rel="stylesheet" href="/static/dashboard.css?v=6">
 </head>
 <body>
   <div class="chrome-shell chrome-shell-top">
@@ -17,7 +17,11 @@
           </div>
         </div>
         <div class="top-bar-actions">
+          <button id="themeToggle" class="theme-switch" type="button" aria-label="Toggle light and dark mode">
+            <span class="theme-switch-knob"></span>
+          </button>
           <button id="refreshButton" class="primary-button" type="button">Refresh Aggregation</button>
+          <a href="/about" class="primary-button">About</a>
         </div>
       </header>
     </div>
@@ -40,7 +44,14 @@
         </div>
       </div>
       <div class="hero-symbol-card">
-        <div class="hero-symbol">Au</div>
+        <div class="hero-symbol-control">
+          <div class="hero-symbol" id="heroSymbol">Au</div>
+          <div class="symbol-picker" id="symbolPicker" role="group" aria-label="Select metal">
+            <button type="button" class="symbol-pill active" data-symbol="XAU">Au</button>
+            <button type="button" class="symbol-pill" data-symbol="XAG">Ag</button>
+            <button type="button" class="symbol-pill" data-symbol="XPT">Pt</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -49,7 +60,7 @@
         <div class="card-header">
           <div>
             <p class="section-label">Price Trend</p>
-            <h2>USD historical performance</h2>
+            <h2 id="historyTitle">USD historical performance</h2>
           </div>
           <label class="pill-select">
             <span>Window</span>
@@ -77,6 +88,7 @@
         <div id="forecastCards" class="forecast-cards"></div>
       </section>
     </main>
+
   </div>
 
   <div class="chrome-shell chrome-shell-bottom">
@@ -89,6 +101,6 @@
   </div>
 
   <div id="chartTooltip" class="chart-tooltip" aria-hidden="true"></div>
-  <script src="/static/dashboard.js?v=5" defer></script>
+  <script src="/static/dashboard.js?v=6" defer></script>
 </body>
 </html>

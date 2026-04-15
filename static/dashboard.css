@@ -1,6 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
 :root {
   color-scheme: light;
   --bg: #f4efe7;
+  --body-background: radial-gradient(circle at top left, rgba(184, 134, 11, 0.22), transparent 26%), radial-gradient(circle at 85% 10%, rgba(124, 90, 8, 0.14), transparent 20%), linear-gradient(160deg, #fbf5ec 0%, #f1e7d8 45%, #efe4d0 100%);
   --paper: rgba(255, 250, 241, 0.88);
   --paper-strong: #fff8ef;
   --paper-deep: #f2e7d4;
@@ -13,6 +16,16 @@
   --green: #2e7d32;
   --red: #b23a2b;
   --shadow: 0 18px 40px rgba(95, 72, 41, 0.12);
+  --topbar-bg: rgba(255, 248, 239, 0.78);
+  --panel-bg: rgba(255, 248, 239, 0.76);
+  --pill-bg: rgba(184, 134, 11, 0.12);
+  --secondary-button-bg: rgba(255, 255, 255, 0.12);
+  --hero-bg: linear-gradient(180deg, rgba(255, 248, 239, 0.92), rgba(244, 231, 210, 0.92)), linear-gradient(135deg, rgba(184, 134, 11, 0.08), transparent 55%);
+  --frame-bg: linear-gradient(180deg, rgba(255, 252, 247, 0.94), rgba(248, 240, 227, 0.92));
+  --forecast-bg: linear-gradient(180deg, rgba(255, 252, 247, 0.96), rgba(248, 240, 227, 0.94));
+  --footer-bg: rgba(255, 248, 239, 0.76);
+  --tooltip-bg: rgba(255, 252, 247, 0.98);
+  --secondary-button-bg: rgba(255, 255, 255, 0.12);
 }
 
 * {
@@ -25,13 +38,36 @@ html {
 
 body {
   margin: 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Space Grotesk", Inter, "Segoe UI", system-ui, sans-serif;
   color: var(--text);
-  background:
-    radial-gradient(circle at top left, rgba(184, 134, 11, 0.22), transparent 26%),
-    radial-gradient(circle at 85% 10%, rgba(124, 90, 8, 0.14), transparent 20%),
-    linear-gradient(160deg, #fbf5ec 0%, #f1e7d8 45%, #efe4d0 100%);
+  background: var(--body-background);
   min-height: 100vh;
+}
+
+body.dark-mode {
+  color-scheme: dark;
+  --bg: #050505;
+  --body-background: radial-gradient(circle at top left, rgba(243, 193, 83, 0.14), transparent 20%), radial-gradient(circle at 85% 10%, rgba(184, 134, 11, 0.1), transparent 16%), linear-gradient(160deg, #050505 0%, #111111 45%, #0a0a0a 100%);
+  --paper: rgba(18, 18, 18, 0.88);
+  --paper-strong: #111111;
+  --paper-deep: #0d0d0d;
+  --text: #f5f2e9;
+  --muted: #c1b8ac;
+  --line: rgba(255, 255, 255, 0.08);
+  --gold: #f3c153;
+  --gold-bright: #ffdd70;
+  --gold-deep: #b88712;
+  --green: #67c48f;
+  --red: #e9746f;
+  --topbar-bg: rgba(22, 22, 22, 0.92);
+  --hero-bg: linear-gradient(180deg, rgba(18, 18, 18, 0.96), rgba(24, 24, 24, 0.96)), linear-gradient(135deg, rgba(243, 193, 83, 0.1), transparent 55%);
+  --panel-bg: rgba(18, 18, 18, 0.90);
+  --frame-bg: linear-gradient(180deg, rgba(28, 28, 28, 0.96), rgba(20, 20, 20, 0.96));
+  --forecast-bg: linear-gradient(180deg, rgba(18, 18, 18, 0.96), rgba(20, 20, 20, 0.94));
+  --footer-bg: rgba(18, 18, 18, 0.88);
+  --tooltip-bg: rgba(18, 18, 18, 0.96);
+  --pill-bg: rgba(243, 193, 83, 0.14);
+  --secondary-button-bg: rgba(255, 255, 255, 0.08);
 }
 
 .chrome-shell {
@@ -71,7 +107,7 @@ body {
   align-items: center;
   gap: 24px;
   padding: 18px 24px;
-  background: rgba(255, 248, 239, 0.78);
+  background: var(--topbar-bg);
   border-radius: 10px;
 }
 
@@ -134,9 +170,44 @@ body {
 
 .top-bar-actions {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.symbol-picker {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.symbol-pill {
+  border: 1px solid rgba(31, 26, 23, 0.12);
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.symbol-pill.active {
+  background: var(--gold);
+  color: #fff8ef;
+  border-color: var(--gold);
+}
+
+.symbol-pill:hover {
+  background: rgba(184, 134, 11, 0.12);
 }
 
 .primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
   border: 0;
   border-radius: 999px;
   padding: 12px 18px;
@@ -147,15 +218,92 @@ body {
   cursor: pointer;
 }
 
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  border: 1px solid rgba(31, 26, 23, 0.10);
+  border-radius: 999px;
+  padding: 12px 18px;
+  background: var(--secondary-button-bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.secondary-button:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.theme-switch {
+  width: 98px;
+  height: 36px;
+  border: 1px solid rgba(31, 26, 23, 0.12);
+  border-radius: 999px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.theme-switch.dark {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.theme-switch-knob {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  transition: transform 180ms ease, background-color 180ms ease;
+}
+
+.theme-switch.dark .theme-switch-knob {
+  transform: translateX(35px);
+  background: var(--text);
+}
+
+.theme-switch::before,
+.theme-switch::after {
+  display: block;
+  width: 18px;
+  font-size: 0.8rem;
+  line-height: 1;
+  color: var(--text);
+}
+
+.theme-switch::before {
+  content: "☀";
+  margin-left: 4px;
+}
+
+.theme-switch::after {
+  content: "☾";
+  margin-right: 4px;
+}
+
+.theme-switch.dark::before {
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.theme-switch.dark::after {
+  color: rgba(255, 255, 255, 0.98);
+}
+
 .hero-card {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) 220px;
   gap: 24px;
   padding: 38px 40px;
   margin-bottom: 22px;
-  background:
-    linear-gradient(180deg, rgba(255, 248, 239, 0.92), rgba(244, 231, 210, 0.92)),
-    linear-gradient(135deg, rgba(184, 134, 11, 0.08), transparent 55%);
+  background: var(--hero-bg);
   border-radius: 36px;
 }
 
@@ -203,7 +351,7 @@ body {
 }
 
 .hero-price-panel {
-  background: rgba(255, 252, 247, 0.52);
+  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 28px;
   padding: 24px;
@@ -226,7 +374,7 @@ body {
   min-height: 56px;
   padding: 14px 22px;
   border-radius: 20px;
-  background: rgba(184, 134, 11, 0.12);
+  background: var(--pill-bg);
   color: var(--gold-deep);
   font-weight: 700;
 }
@@ -236,12 +384,27 @@ body {
   place-items: center;
   border-radius: 28px;
   background: linear-gradient(160deg, rgba(124, 90, 8, 0.86), rgba(168, 120, 14, 0.76));
+  padding: 34px 18px;
+}
+
+.hero-symbol-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
 }
 
 .hero-symbol {
   font-size: clamp(4rem, 8vw, 6rem);
   color: #ffd16b;
   line-height: 1;
+}
+
+.symbol-picker {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .dashboard-grid {
@@ -251,7 +414,7 @@ body {
 }
 
 .card {
-  background: rgba(255, 248, 239, 0.76);
+  background: var(--panel-bg);
   border-radius: 34px;
   padding: 26px;
 }
@@ -269,6 +432,24 @@ body {
   font-size: 1.45rem;
 }
 
+.about-panel {
+  background: var(--panel-bg);
+  padding: 32px;
+  border-radius: 34px;
+  box-shadow: var(--shadow);
+}
+
+.about-text {
+  margin: 0 0 18px;
+  color: var(--muted);
+  line-height: 1.75;
+  max-width: 800px;
+}
+
+.about-text strong {
+  color: var(--text);
+}
+
 .pill-select {
   display: inline-flex;
   gap: 10px;
@@ -276,7 +457,7 @@ body {
   padding: 10px 12px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: rgba(184, 134, 11, 0.14);
+  background: var(--pill-bg);
 }
 
 .pill-select select {
@@ -313,7 +494,7 @@ body {
 .forecast-item {
   border: 1px solid var(--line);
   border-radius: 26px;
-  background: linear-gradient(180deg, rgba(255, 252, 247, 0.96), rgba(248, 240, 227, 0.94));
+  background: var(--forecast-bg);
   padding: 20px 20px 18px;
   display: grid;
   gap: 12px;
@@ -346,7 +527,7 @@ body {
 
 .forecast-badge {
   color: var(--gold-deep);
-  background: rgba(184, 134, 11, 0.14);
+  background: var(--pill-bg);
   border-radius: 999px;
   padding: 7px 10px;
   font-size: 0.8rem;
@@ -373,8 +554,7 @@ body {
   width: 100%;
   min-height: 320px;
   border-radius: 24px;
-  background:
-    linear-gradient(180deg, rgba(255, 252, 247, 0.94), rgba(248, 240, 227, 0.92));
+  background: var(--frame-bg);
   border: 1px solid var(--line);
   overflow: hidden;
 }
@@ -404,9 +584,9 @@ svg {
   pointer-events: none;
   min-width: 150px;
   padding: 10px 12px;
-  border: 1px solid rgba(124, 90, 8, 0.18);
+  border: 1px solid var(--line);
   border-radius: 12px;
-  background: rgba(255, 252, 247, 0.98);
+  background: var(--tooltip-bg);
   box-shadow: 0 12px 30px rgba(95, 72, 41, 0.18);
 }
 
@@ -439,7 +619,7 @@ svg {
 .page-footer {
   width: 100%;
   padding: 20px 24px;
-  background: rgba(255, 248, 239, 0.76);
+  background: var(--footer-bg);
   border-radius: 10px;
   display: flex;
   flex-direction: column;

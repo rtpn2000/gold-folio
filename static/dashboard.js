@@ -25,6 +25,61 @@ function formatChange(value, formatter) {
   return `<span class="${className}">${prefix}${formatter.format(value)} vs previous record</span>`;
 }
 
+const metalSymbols = {
+  XAU: { label: "Au", name: "Gold" },
+  XAG: { label: "Ag", name: "Silver" },
+  XPT: { label: "Pt", name: "Platinum" },
+};
+
+let currentSymbol = localStorage.getItem("selectedMetal") || "XAU";
+
+function getSymbolMeta(symbol) {
+  return metalSymbols[symbol] || metalSymbols.XAU;
+}
+
+function setActiveSymbol(symbol) {
+  currentSymbol = symbol.toUpperCase();
+  localStorage.setItem("selectedMetal", currentSymbol);
+
+  const meta = getSymbolMeta(currentSymbol);
+  document.getElementById("heroSymbol").textContent = meta.label;
+  document.getElementById("historyTitle").textContent = `${meta.name} USD historical performance`;
+  const refreshButton = document.getElementById("refreshButton");
+  if (refreshButton) {
+    refreshButton.textContent = `Refresh ${meta.label}`;
+  }
+
+  document.querySelectorAll(".symbol-pill").forEach((button) => {
+    button.classList.toggle("active", button.dataset.symbol === currentSymbol);
+  });
+}
+
+function getSymbolQuery() {
+  return `symbol=${encodeURIComponent(currentSymbol)}`;
+}
+
+function setTheme(isDark) {
+  document.body.classList.toggle("dark-mode", isDark);
+  const button = document.getElementById("themeToggle");
+  if (button) {
+    button.classList.toggle("dark", isDark);
+    button.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+  }
+}
+
+function loadTheme() {
+  const savedTheme = localStorage.getItem("theme");
+  const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)")?.matches;
+  const isDark = savedTheme ? savedTheme === "dark" : prefersDark;
+  setTheme(isDark);
+}
+
+function toggleTheme() {
+  const isDark = !document.body.classList.contains("dark-mode");
+  setTheme(isDark);
+  localStorage.setItem("theme", isDark ? "dark" : "light");
+}
+
 function updateHeroPrice(summary) {
   const latest = summary?.latest;
   const change = summary?.change || {};
@@ -225,7 +280,7 @@ function renderForecastCards(items) {
 
 // Loads the top summary cards.
 async function loadSummary() {
-  const summary = await fetchJson("/api/summary");
+  const summary = await fetchJson(`/api/summary?${getSymbolQuery()}`);
   const latest = summary.latest;
   latestSummary = summary;
 
@@ -235,7 +290,7 @@ async function loadSummary() {
 // Loads the historical chart and recent table data.
 async function loadHistory() {
   const days = document.getElementById("historyWindow").value;
-  const data = await fetchJson(`/api/history?days=${days}`);
+  const data = await fetchJson(`/api/history?days=${days}&${getSymbolQuery()}`);
   drawLineChart(
     document.getElementById("historyChart"),
     data.items.map((item) => ({ label: item.date, value: item.price_per_gram_usd })),
@@ -244,7 +299,7 @@ async function loadHistory() {
 }
 
 async function loadForecast() {
-  const result = await fetchJson("/api/forecast?days=30");
+  const result = await fetchJson(`/api/forecast?days=30&${getSymbolQuery()}`);
   const status = document.getElementById("forecastStatus");
 
   if (!status) {
@@ -257,7 +312,8 @@ async function loadForecast() {
     return;
   }
 
-  status.textContent = "Short-term projected prices from the current forecasting model.";
+  const meta = getSymbolMeta(currentSymbol);
+  status.textContent = `Short-term projected ${meta.name.toLowerCase()} prices from the current forecasting model.`;
   renderForecastCards(result.items || []);
 }
 
@@ -265,11 +321,12 @@ async function loadForecast() {
 async function refreshAggregation() {
   const status = document.getElementById("refreshStatus");
   if (status) {
-    status.textContent = "Fetching fresh gold prices and saving them.";
+    const meta = getSymbolMeta(currentSymbol);
+    status.textContent = `Fetching fresh ${meta.name.toLowerCase()} prices and saving them.`;
   }
 
   try {
-    const result = await fetchJson("/aggregate");
+    const result = await fetchJson(`/aggregate?${getSymbolQuery()}`);
     if (status) {
       status.textContent = `Saved ${result.rows} row(s). Sources: ${result.sources.join(", ") || "n/a"}.`;
     }
@@ -283,15 +340,31 @@ async function refreshAggregation() {
 
 // Dashboard bootstrap.
 async function initDashboard() {
-  await Promise.all([loadSummary(), loadHistory(), loadForecast()]);
+  loadTheme();
+  setActiveSymbol(currentSymbol);
 
-  document.getElementById("historyWindow").addEventListener("change", loadHistory);
-  document.getElementById("refreshButton").addEventListener("click", refreshAggregation);
+  document.getElementById("historyWindow")?.addEventListener("change", loadHistory);
+  document.getElementById("refreshButton")?.addEventListener("click", refreshAggregation);
+  document.getElementById("themeToggle")?.addEventListener("click", toggleTheme);
+
+  document.querySelectorAll(".symbol-pill").forEach((pill) => {
+    pill.addEventListener("click", () => {
+      const symbol = pill.dataset.symbol;
+      if (symbol && symbol !== currentSymbol) {
+        setActiveSymbol(symbol);
+        Promise.all([loadSummary(), loadHistory(), loadForecast()]);
+      }
+    });
+  });
+
+  try {
+    await Promise.all([loadSummary(), loadHistory(), loadForecast()]);
+  } catch (error) {
+    const status = document.getElementById("refreshStatus");
+    if (status) {
+      status.textContent = `Dashboard load failed: ${error.message}`;
+    }
+  }
 }
 
-initDashboard().catch((error) => {
-  const status = document.getElementById("refreshStatus");
-  if (status) {
-    status.textContent = `Dashboard load failed: ${error.message}`;
-  }
-});
+initDashboard();
