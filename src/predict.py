@@ -3,8 +3,8 @@ import pandas as pd
 from src.train_model import load_series_from_db
 
 
-def moving_average_forecast(days: int = 30, window: int = 7, target: str = "usd"):
-    series = load_series_from_db(target=target)
+def moving_average_forecast(days: int = 30, window: int = 7, target: str = "usd", symbol: str = "XAU"):
+    series = load_series_from_db(target=target, symbol=symbol)
     if series is None or series.empty:
         return {"error": "No DB history yet. Ingest prices first."}
 
@@ -30,5 +30,5 @@ def moving_average_forecast(days: int = 30, window: int = 7, target: str = "usd"
     }
 
 
-def forecast(days: int = 30):
-    return moving_average_forecast(days=days)
+def forecast(days: int = 30, symbol: str = "XAU"):
+    return moving_average_forecast(days=days, symbol=symbol)
