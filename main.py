@@ -31,7 +31,28 @@ def ensure_symbol_column():
             conn.execute(text("ALTER TABLE gold_prices ALTER COLUMN symbol DROP DEFAULT"))
 
 
+def ensure_date_symbol_constraint():
+    inspector = inspect(engine)
+    if "gold_prices" not in inspector.get_table_names():
+        return
+
+    unique_constraints = {
+        constraint["name"]
+        for constraint in inspector.get_unique_constraints("gold_prices")
+        if constraint.get("name")
+    }
+    if "uq_date_symbol" not in unique_constraints:
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "ALTER TABLE gold_prices "
+                    "ADD CONSTRAINT uq_date_symbol UNIQUE (date, symbol)"
+                )
+            )
+
+
 ensure_symbol_column()
+ensure_date_symbol_constraint()
 
 BASE_DIR = Path(__file__).resolve().parent
 DASHBOARD_PATH = BASE_DIR / "static" / "index.html"

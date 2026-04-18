@@ -1,5 +1,4 @@
 import pandas as pd
-from statsmodels.tsa.arima.model import ARIMA
 
 from src.database import SessionLocal
 from src.models import GoldPrice
@@ -49,6 +48,8 @@ def train_and_save_arima(days_min: int = 30, target: str = "usd"):
     Trains ARIMA on stored daily prices and saves fitted model artifact.
     For MVP: ARIMA(5,1,0).
     """
+    from statsmodels.tsa.arima.model import ARIMA
+
     series = load_series_from_db(target=target)
 
     if series is None or len(series) < days_min:

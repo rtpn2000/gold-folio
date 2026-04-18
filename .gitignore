@@ -1,4 +1,5 @@
 gold-folio-env/
+.metal-folio-env/
 .venv/
 venv/
 env/
