@@ -3,6 +3,9 @@ const currency = {
   inr: new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }),
 };
 
+let latestSummary = null;
+let activeTooltipPointCleanup = null;
+
 // Small helper for all API calls used by the dashboard.
 async function fetchJson(url, options) {
   const response = await fetch(url, options);
@@ -22,12 +25,140 @@ function formatChange(value, formatter) {
   return `<span class="${className}">${prefix}${formatter.format(value)} vs previous record</span>`;
 }
 
+const metalSymbols = {
+  XAU: { label: "Au", name: "Gold" },
+  XAG: { label: "Ag", name: "Silver" },
+  XPT: { label: "Pt", name: "Platinum" },
+};
+
+let currentSymbol = localStorage.getItem("selectedMetal") || "XAU";
+
+function getSymbolMeta(symbol) {
+  return metalSymbols[symbol] || metalSymbols.XAU;
+}
+
+function setActiveSymbol(symbol) {
+  currentSymbol = symbol.toUpperCase();
+  localStorage.setItem("selectedMetal", currentSymbol);
+
+  const meta = getSymbolMeta(currentSymbol);
+  document.getElementById("heroSymbol").textContent = meta.label;
+  document.getElementById("historyTitle").textContent = `${meta.name} USD historical performance`;
+  const refreshButton = document.getElementById("refreshButton");
+  if (refreshButton) {
+    refreshButton.textContent = `Refresh ${meta.label}`;
+  }
+
+  document.querySelectorAll(".symbol-pill").forEach((button) => {
+    button.classList.toggle("active", button.dataset.symbol === currentSymbol);
+  });
+}
+
+function getSymbolQuery() {
+  return `symbol=${encodeURIComponent(currentSymbol)}`;
+}
+
+function setTheme(isDark) {
+  document.body.classList.toggle("dark-mode", isDark);
+  const button = document.getElementById("themeToggle");
+  if (button) {
+    button.classList.toggle("dark", isDark);
+    button.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+  }
+}
+
+function loadTheme() {
+  const savedTheme = localStorage.getItem("theme");
+  const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)")?.matches;
+  const isDark = savedTheme ? savedTheme === "dark" : prefersDark;
+  setTheme(isDark);
+}
+
+function toggleTheme() {
+  const isDark = !document.body.classList.contains("dark-mode");
+  setTheme(isDark);
+  localStorage.setItem("theme", isDark ? "dark" : "light");
+}
+
+function updateHeroPrice(summary) {
+  const latest = summary?.latest;
+  const change = summary?.change || {};
+  const usdPrice = document.getElementById("usdPrice");
+  const usdChange = document.getElementById("usdChange");
+  const inrPrice = document.getElementById("inrPrice");
+  const inrChange = document.getElementById("inrChange");
+
+  if (!usdPrice || !usdChange || !inrPrice || !inrChange) {
+    return;
+  }
+
+  usdPrice.textContent = latest ? currency.usd.format(latest.price_per_gram_usd) : "--";
+  usdChange.innerHTML = formatChange(change.usd, currency.usd);
+  inrPrice.textContent = latest && latest.price_per_gram_inr != null ? currency.inr.format(latest.price_per_gram_inr) : "--";
+  inrChange.innerHTML = formatChange(change.inr, currency.inr);
+}
+
+function hideChartTooltip() {
+  const tooltip = document.getElementById("chartTooltip");
+  if (!tooltip) {
+    return;
+  }
+  tooltip.classList.remove("is-visible");
+  tooltip.setAttribute("aria-hidden", "true");
+}
+
+function showChartTooltip(event) {
+  const tooltip = document.getElementById("chartTooltip");
+  const target = event.currentTarget;
+  if (!tooltip || !target) {
+    return;
+  }
+
+  tooltip.innerHTML = `
+    <span class="chart-tooltip-date">${target.dataset.label || ""}</span>
+    <span class="chart-tooltip-price">${target.dataset.price || ""}</span>
+  `;
+  tooltip.classList.add("is-visible");
+  tooltip.setAttribute("aria-hidden", "false");
+  tooltip.style.left = `${event.clientX + 16}px`;
+  tooltip.style.top = `${event.clientY + 18}px`;
+}
+
+function bindChartTooltip(svg) {
+  if (!svg) {
+    return;
+  }
+
+  if (typeof activeTooltipPointCleanup === "function") {
+    activeTooltipPointCleanup();
+  }
+
+  const points = Array.from(svg.querySelectorAll(".chart-hit-point"));
+  const onMove = (event) => showChartTooltip(event);
+  const onLeave = () => hideChartTooltip();
+
+  points.forEach((point) => {
+    point.addEventListener("mouseenter", onMove);
+    point.addEventListener("mousemove", onMove);
+    point.addEventListener("mouseleave", onLeave);
+  });
+
+  activeTooltipPointCleanup = () => {
+    points.forEach((point) => {
+      point.removeEventListener("mouseenter", onMove);
+      point.removeEventListener("mousemove", onMove);
+      point.removeEventListener("mouseleave", onLeave);
+    });
+    hideChartTooltip();
+  };
+}
+
 // Draws a simple SVG line chart for history and forecast data.
 function drawLineChart(svg, values, color) {
   const width = 800;
   const height = 320;
-  const padX = 26;
-  const padY = 24;
+  const padX = 64;
+  const padY = 28;
 
   if (!values.length) {
     svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#6f6257" font-size="18">No data available</text>`;
@@ -38,112 +169,202 @@ function drawLineChart(svg, values, color) {
   const min = Math.min(...nums);
   const max = Math.max(...nums);
   const span = max - min || 1;
+  const yTicks = [0, 0.33, 0.66, 1];
+  const gridLines = yTicks
+    .map((ratio) => {
+      const y = height - padY - ratio * (height - padY * 2);
+      return `<line x1="${padX}" y1="${y}" x2="${width - padX}" y2="${y}" stroke="rgba(99,77,54,0.10)" stroke-width="1" stroke-dasharray="4 8"></line>`;
+    })
+    .join("");
+  const yLabels = yTicks
+    .map((ratio) => {
+      const y = height - padY - ratio * (height - padY * 2);
+      const value = min + ratio * span;
+      return `<text x="${padX - 12}" y="${y + 4}" text-anchor="end" fill="#6f6257" font-size="13">${currency.usd.format(value)}</text>`;
+    })
+    .join("");
 
   const points = values.map((item, index) => {
     const x = padX + (index / Math.max(values.length - 1, 1)) * (width - padX * 2);
     const y = height - padY - ((item.value - min) / span) * (height - padY * 2);
     return `${x},${y}`;
   }).join(" ");
+  const pointDots = values
+    .map((item, index) => {
+      const x = padX + (index / Math.max(values.length - 1, 1)) * (width - padX * 2);
+      const y = height - padY - ((item.value - min) / span) * (height - padY * 2);
+      const date = new Date(item.label);
+      const label = Number.isNaN(date.getTime())
+        ? item.label
+        : date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      const valueLabel = currency.usd.format(item.value);
+      return `
+        <circle
+          cx="${x}"
+          cy="${y}"
+          r="8"
+          fill="transparent"
+          class="chart-hit-point"
+          data-label="${label}"
+          data-price="${valueLabel}"
+        ></circle>
+      `;
+    })
+    .join("");
 
-  const areaPoints = `${padX},${height - padY} ${points} ${width - padX},${height - padY}`;
+  const xTickIndexes = values.length <= 6
+    ? values.map((_, index) => index)
+    : [0, Math.floor((values.length - 1) * 0.25), Math.floor((values.length - 1) * 0.5), Math.floor((values.length - 1) * 0.75), values.length - 1];
+  const uniqueTickIndexes = [...new Set(xTickIndexes)];
+  const xLabels = uniqueTickIndexes
+    .map((index) => {
+      const x = padX + (index / Math.max(values.length - 1, 1)) * (width - padX * 2);
+      const date = new Date(values[index].label);
+      const label = Number.isNaN(date.getTime())
+        ? values[index].label
+        : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      return `<text x="${x}" y="${height - 6}" text-anchor="middle" fill="#6f6257" font-size="13">${label}</text>`;
+    })
+    .join("");
+
   const finalPoint = values[values.length - 1];
+  const finalX = padX + ((values.length - 1) / Math.max(values.length - 1, 1)) * (width - padX * 2);
+  const finalY = height - padY - ((finalPoint.value - min) / span) * (height - padY * 2);
 
   svg.innerHTML = `
-    <defs>
-      <linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1">
-        <stop offset="0%" stop-color="${color}" stop-opacity="0.34"></stop>
-        <stop offset="100%" stop-color="${color}" stop-opacity="0.03"></stop>
-      </linearGradient>
-    </defs>
+    ${gridLines}
+    ${yLabels}
     <line x1="${padX}" y1="${height - padY}" x2="${width - padX}" y2="${height - padY}" stroke="rgba(99,77,54,0.18)" stroke-width="1"></line>
-    <polygon points="${areaPoints}" fill="url(#chartFill)"></polygon>
+    <line x1="${padX}" y1="${padY}" x2="${padX}" y2="${height - padY}" stroke="rgba(99,77,54,0.18)" stroke-width="1"></line>
     <polyline points="${points}" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></polyline>
-    <circle cx="${padX + ((values.length - 1) / Math.max(values.length - 1, 1)) * (width - padX * 2)}" cy="${height - padY - ((finalPoint.value - min) / span) * (height - padY * 2)}" r="5" fill="${color}"></circle>
+    ${pointDots}
+    <circle cx="${finalX}" cy="${finalY}" r="5" fill="${color}"></circle>
+    <circle cx="${finalX}" cy="${finalY}" r="10" fill="${color}" opacity="0.15"></circle>
+    ${xLabels}
   `;
+
+  bindChartTooltip(svg);
 }
 
-// Renders the latest stored rows into the table at the bottom of the page.
-function renderTable(items) {
-  const tbody = document.getElementById("historyTable");
-  tbody.innerHTML = "";
+function renderForecastCards(items) {
+  const container = document.getElementById("forecastCards");
+  if (!container) {
+    return;
+  }
 
-  items.slice(-10).reverse().forEach((item) => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${item.date}</td>
-      <td>${item.price_per_gram_usd == null ? "--" : currency.usd.format(item.price_per_gram_usd)}</td>
-      <td>${item.price_per_gram_inr == null ? "--" : currency.inr.format(item.price_per_gram_inr)}</td>
+  container.innerHTML = "";
+
+  items.slice(0, 8).forEach((item, index) => {
+    const prev = index > 0 ? items[index - 1].price : null;
+    const delta = prev == null ? null : item.price - prev;
+    const deltaClass = delta == null ? "" : delta > 0 ? "up" : delta < 0 ? "down" : "";
+    const deltaPrefix = delta != null && delta > 0 ? "+" : "";
+    const deltaText = delta == null
+      ? "Baseline reference"
+      : `${deltaPrefix}${currency.usd.format(delta)} vs previous day`;
+
+    const card = document.createElement("article");
+    card.className = "forecast-item";
+    card.innerHTML = `
+      <div class="forecast-item-top">
+        <span class="forecast-date">${item.date}</span>
+        <span class="forecast-badge">Forecast</span>
+      </div>
+      <strong class="forecast-price">${currency.usd.format(item.price)}</strong>
+      <div class="forecast-change ${deltaClass}">${deltaText}</div>
+      <p class="forecast-note">Projected reference price for the selected forecast horizon.</p>
     `;
-    tbody.appendChild(row);
+    container.appendChild(card);
   });
 }
 
 // Loads the top summary cards.
 async function loadSummary() {
-  const summary = await fetchJson("/api/summary");
+  const summary = await fetchJson(`/api/summary?${getSymbolQuery()}`);
   const latest = summary.latest;
+  latestSummary = summary;
 
-  document.getElementById("historyCount").textContent = String(summary.history_points);
-  document.getElementById("usdPrice").textContent = latest ? currency.usd.format(latest.price_per_gram_usd) : "--";
-  document.getElementById("inrPrice").textContent = latest && latest.price_per_gram_inr != null ? currency.inr.format(latest.price_per_gram_inr) : "--";
-  document.getElementById("latestDate").textContent = latest ? `Latest record: ${latest.date}` : "No records loaded";
-  document.getElementById("usdChange").innerHTML = formatChange(summary.change.usd, currency.usd);
-  document.getElementById("inrChange").innerHTML = formatChange(summary.change.inr, currency.inr);
+  updateHeroPrice(summary);
 }
 
 // Loads the historical chart and recent table data.
 async function loadHistory() {
   const days = document.getElementById("historyWindow").value;
-  const data = await fetchJson(`/api/history?days=${days}`);
+  const data = await fetchJson(`/api/history?days=${days}&${getSymbolQuery()}`);
   drawLineChart(
     document.getElementById("historyChart"),
     data.items.map((item) => ({ label: item.date, value: item.price_per_gram_usd })),
     "#b8860b"
   );
-  renderTable(data.items);
 }
 
-// Loads the ARIMA forecast if a trained model artifact exists.
 async function loadForecast() {
-  const result = await fetchJson("/api/forecast?days=30");
+  const result = await fetchJson(`/api/forecast?days=30&${getSymbolQuery()}`);
   const status = document.getElementById("forecastStatus");
 
-  if (result.error) {
-    status.textContent = result.error;
-    drawLineChart(document.getElementById("forecastChart"), [], "#7c5a08");
+  if (!status) {
     return;
   }
 
-  status.textContent = "Forecast generated from the saved ARIMA model artifact.";
-  drawLineChart(
-    document.getElementById("forecastChart"),
-    result.items.map((item) => ({ label: item.date, value: item.price })),
-    "#7c5a08"
-  );
+  if (result.error) {
+    status.textContent = result.error;
+    renderForecastCards([]);
+    return;
+  }
+
+  const meta = getSymbolMeta(currentSymbol);
+  status.textContent = `Short-term projected ${meta.name.toLowerCase()} prices from the current forecasting model.`;
+  renderForecastCards(result.items || []);
 }
 
 // Refreshes live pricing via the aggregation endpoint, then reloads the dashboard.
 async function refreshAggregation() {
   const status = document.getElementById("refreshStatus");
-  status.textContent = "Fetching fresh gold prices and saving them.";
+  if (status) {
+    const meta = getSymbolMeta(currentSymbol);
+    status.textContent = `Fetching fresh ${meta.name.toLowerCase()} prices and saving them.`;
+  }
 
   try {
-    const result = await fetchJson("/aggregate");
-    status.textContent = `Saved ${result.rows} row(s). Sources: ${result.sources.join(", ") || "n/a"}.`;
+    const result = await fetchJson(`/aggregate?${getSymbolQuery()}`);
+    if (status) {
+      status.textContent = `Saved ${result.rows} row(s). Sources: ${result.sources.join(", ") || "n/a"}.`;
+    }
     await Promise.all([loadSummary(), loadHistory(), loadForecast()]);
   } catch (error) {
-    status.textContent = `Refresh failed: ${error.message}`;
+    if (status) {
+      status.textContent = `Refresh failed: ${error.message}`;
+    }
   }
 }
 
 // Dashboard bootstrap.
 async function initDashboard() {
-  await Promise.all([loadSummary(), loadHistory(), loadForecast()]);
+  loadTheme();
+  setActiveSymbol(currentSymbol);
 
-  document.getElementById("historyWindow").addEventListener("change", loadHistory);
-  document.getElementById("refreshButton").addEventListener("click", refreshAggregation);
+  document.getElementById("historyWindow")?.addEventListener("change", loadHistory);
+  document.getElementById("refreshButton")?.addEventListener("click", refreshAggregation);
+  document.getElementById("themeToggle")?.addEventListener("click", toggleTheme);
+
+  document.querySelectorAll(".symbol-pill").forEach((pill) => {
+    pill.addEventListener("click", () => {
+      const symbol = pill.dataset.symbol;
+      if (symbol && symbol !== currentSymbol) {
+        setActiveSymbol(symbol);
+        Promise.all([loadSummary(), loadHistory(), loadForecast()]);
+      }
+    });
+  });
+
+  try {
+    await Promise.all([loadSummary(), loadHistory(), loadForecast()]);
+  } catch (error) {
+    const status = document.getElementById("refreshStatus");
+    if (status) {
+      status.textContent = `Dashboard load failed: ${error.message}`;
+    }
+  }
 }
 
-initDashboard().catch((error) => {
-  document.getElementById("refreshStatus").textContent = `Dashboard load failed: ${error.message}`;
-});
+initDashboard();

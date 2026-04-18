@@ -1,0 +1,6 @@
+gold-folio-env/
+.venv/
+venv/
+env/
+ENV/
+__pycache__/

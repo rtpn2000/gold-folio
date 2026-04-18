@@ -6,14 +6,19 @@ from src.models import GoldPrice
 from src.model_store import save_model
 
 
-def load_series_from_db(target: str = "usd"):
+def load_series_from_db(target: str = "usd", symbol: str = "XAU"):
     """
     target: "usd" or "inr"
-    Returns a pandas Series indexed by date.
+    Returns a pandas Series indexed by date for the selected metal symbol.
     """
     db = SessionLocal()
     try:
-        rows = db.query(GoldPrice).order_by(GoldPrice.date.asc()).all()
+        rows = (
+            db.query(GoldPrice)
+            .filter(GoldPrice.symbol == symbol.upper())
+            .order_by(GoldPrice.date.asc())
+            .all()
+        )
 
         if target == "inr":
             data = [
