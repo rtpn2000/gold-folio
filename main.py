@@ -3,14 +3,16 @@ from decimal import Decimal
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
 from agg import aggregate_gold_prices
+from config import nebula_city
 from src.crud import get_history, get_latest_price, upsert_gold_prices
 from src.database import SessionLocal, engine
+from src.fetch_nebula import fetch_nebula_retail
 from src.models import Base
 from src.predict import forecast
 
@@ -56,6 +58,7 @@ ensure_date_symbol_constraint()
 
 BASE_DIR = Path(__file__).resolve().parent
 DASHBOARD_PATH = BASE_DIR / "static" / "index.html"
+ABOUT_PATH = BASE_DIR / "static" / "about.html"
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
@@ -135,51 +138,12 @@ def dashboard():
 
 @app.get("/about")
 def about_page():
-    html = """
-<!DOCTYPE html>
-<html lang=\"en\">
-<head>
-  <meta charset=\"UTF-8\">
-  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
-  <title>About Metal Folio</title>
-  <link rel=\"stylesheet\" href=\"/static/dashboard.css?v=6\">
-</head>
-<body>
-  <div class=\"chrome-shell chrome-shell-top\">
-    <div class=\"chrome-inner\">
-      <header class=\"top-bar\">
-        <div class=\"brand-block\">
-          <div class=\"brand-mark\">$</div>
-          <div>
-            <h1 class=\"brand-title\">Metal Folio</h1>
-          </div>
-        </div>
-        <div class=\"top-bar-actions\">
-          <a href=\"/dashboard\" class=\"secondary-button\">Dashboard</a>
-          <a href=\"/about\" class=\"primary-button\">About</a>
-        </div>
-      </header>
-    </div>
-  </div>
-
-  <div class=\"page-shell\">
-    <section class=\"card about-panel\">
-      <div class=\"card-header\">
-        <div>
-          <p class=\"section-label\">About</p>
-          <h2>Metal Folio</h2>
-        </div>
-      </div>
-      <p class=\"about-text\">Metal Folio is a personal project built to track and visualize metal prices for gold, silver, and platinum. It is designed for informational purposes only and is not financial advice.</p>
-      <p class=\"about-text\">The application aggregates market data from external price APIs, stores daily price history, and renders trend and forecast views in USD and INR.</p>
-      <p class=\"about-text\"><strong>Author:</strong> Your Name<br><strong>Project Type:</strong> Personal informational dashboard<br><strong>Built with:</strong> FastAPI, SQLAlchemy, PostgreSQL, vanilla HTML/CSS/JS</p>
-      <p class=\"about-text\">This project is intended as a learning and reference tool. Please verify pricing independently before making any decisions.</p>
-    </section>
-  </div>
-</body>
-</html>
-    """
-    return HTMLResponse(content=html, headers={"Cache-Control": "no-store, max-age=0"})
+    if not ABOUT_PATH.exists():
+        raise HTTPException(status_code=404, detail="About page file not found.")
+    return FileResponse(
+        ABOUT_PATH,
+        headers={"Cache-Control": "no-store, max-age=0"},
+    )
 
 
 @app.get("/aggregate")
@@ -258,6 +222,36 @@ def api_forecast(
     if result.get("error"):
         return {"items": [], "error": result["error"], "method": None}
     return result
+
+
+@app.get("/api/retail")
+def api_retail(
+    symbol: str = Query(default="XAU", pattern="^(XAU|XAG|XPT)$"),
+    city: str = Query(default=nebula_city, min_length=2, max_length=80),
+):
+    symbol = symbol.upper()
+    if symbol != "XAU":
+        return {
+            "item": None,
+            "error": "India retail pricing is currently configured for gold (XAU) only.",
+        }
+
+    try:
+        data = fetch_nebula_retail(city=city)
+    except Exception as exc:
+        return {"item": None, "error": str(exc)}
+
+    return {
+        "item": {
+            "city": data["city"],
+            "symbol": symbol,
+            "price_per_gram_inr_24k": data["price_per_gram_inr_24k"],
+            "price_per_gram_inr_22k": data["price_per_gram_inr_22k"],
+            "source": data["source"],
+            "timestamp": data["timestamp"],
+        },
+        "error": None,
+    }
 
 
 if __name__ == "__main__":
