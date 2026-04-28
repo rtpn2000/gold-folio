@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>About Metal Folio</title>
-  <link rel="stylesheet" href="/static/dashboard.css?v=6">
+  <title>About</title>
+  <link rel="stylesheet" href="/static/dashboard.css?v=8">
 </head>
 <body>
   <div class="chrome-shell chrome-shell-top">
@@ -17,6 +17,9 @@
           </div>
         </div>
         <div class="top-bar-actions">
+          <button id="themeToggle" class="theme-switch" type="button" aria-label="Toggle light and dark mode">
+            <span class="theme-switch-knob"></span>
+          </button>
           <a href="/dashboard" class="secondary-button">Dashboard</a>
           <a href="/about" class="primary-button">About</a>
         </div>
@@ -34,9 +37,36 @@
       </div>
       <p class="about-text">Metal Folio is a personal project built to track and visualize metal prices for gold, silver, and platinum. It is designed for informational purposes only and is not financial advice.</p>
       <p class="about-text">The application aggregates market data from external price APIs, stores daily price history, and renders trend and forecast views in USD and INR.</p>
-      <p class="about-text"><strong>Author:</strong> Your Name<br><strong>Project Type:</strong> Personal informational dashboard<br><strong>Built with:</strong> FastAPI, SQLAlchemy, PostgreSQL, vanilla HTML/CSS/JS</p>
+      <p class="about-text"><strong>Developer:</strong> Ravi Tarun Prasad Nimmalapudi<br><strong>Project Type:</strong> Personal Informational Dashboard<br></p>
       <p class="about-text">This project is intended as a learning and reference tool. Please verify pricing independently before making any decisions.</p>
     </section>
   </div>
+
+  <script>
+    function setTheme(isDark) {
+      document.body.classList.toggle("dark-mode", isDark);
+      const button = document.getElementById("themeToggle");
+      if (button) {
+        button.classList.toggle("dark", isDark);
+        button.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+      }
+    }
+
+    function loadTheme() {
+      const savedTheme = localStorage.getItem("theme");
+      const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const isDark = savedTheme ? savedTheme === "dark" : prefersDark;
+      setTheme(isDark);
+    }
+
+    function toggleTheme() {
+      const isDark = !document.body.classList.contains("dark-mode");
+      setTheme(isDark);
+      localStorage.setItem("theme", isDark ? "dark" : "light");
+    }
+
+    loadTheme();
+    document.getElementById("themeToggle")?.addEventListener("click", toggleTheme);
+  </script>
 </body>
 </html>
