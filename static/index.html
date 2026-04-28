@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Metal Folio</title>
-  <link rel="stylesheet" href="/static/dashboard.css?v=6">
+  <link rel="stylesheet" href="/static/dashboard.css?v=8">
 </head>
 <body>
   <div class="chrome-shell chrome-shell-top">
@@ -30,16 +30,22 @@
   <div class="page-shell">
     <section id="overview" class="hero-card">
       <div class="hero-copy-block">
-        <div class="hero-metrics hero-metrics-split">
-          <div class="hero-price-stack hero-price-panel">
-            <span class="hero-price-label">USD / gram</span>
-            <strong id="usdPrice" class="hero-price">--</strong>
-            <div class="hero-change-pill" id="usdChange">No change data yet</div>
+        <p id="heroComingSoon" class="hero-copy dashboard-placeholder-copy is-hidden">This dashboard is coming soon.</p>
+        <div id="heroMetrics" class="hero-metrics hero-metrics-split">
+          <div class="hero-price-stack hero-price-panel hero-price-panel-retail">
+            <span class="hero-price-label">Retail 24K / Gram</span>
+            <strong id="retail24kPrice" class="hero-price hero-price-retail">--</strong>
+            <div class="hero-change-pill hero-retail-pill" id="retail24kMeta">Waiting for retail price.</div>
           </div>
           <div class="hero-price-stack hero-price-panel hero-price-panel-secondary">
-            <span class="hero-price-label">INR / gram</span>
-            <strong id="inrPrice" class="hero-price hero-price-secondary">--</strong>
-            <div class="hero-change-pill" id="inrChange">No change data yet</div>
+            <span class="hero-price-label">Retail 22K / Gram</span>
+            <strong id="retail22kPrice" class="hero-price hero-price-secondary">--</strong>
+            <div class="hero-change-pill" id="retail22kMeta">Waiting for retail price.</div>
+          </div>
+          <div class="hero-price-stack hero-price-panel">
+            <span class="hero-price-label">USD / ounce</span>
+            <strong id="usdOuncePrice" class="hero-price">--</strong>
+            <div class="hero-change-pill" id="usdOunceChange">No change data yet</div>
           </div>
         </div>
       </div>
@@ -55,7 +61,7 @@
       </div>
     </section>
 
-    <main class="dashboard-grid">
+    <main id="goldDashboard" class="dashboard-grid">
       <section id="history" class="card chart-card chart-main">
         <div class="card-header">
           <div>
@@ -81,11 +87,42 @@
         <div class="card-header">
           <div>
             <p class="section-label">Forecast</p>
-            <h2>Upcoming prices</h2>
+            <h2>Coming soon</h2>
           </div>
         </div>
-        <p id="forecastStatus" class="muted-text forecast-intro">Loading forecast data.</p>
+        <p id="forecastStatus" class="muted-text forecast-intro">Forecasting will return in a later update.</p>
         <div id="forecastCards" class="forecast-cards"></div>
+      </section>
+    </main>
+
+    <main id="metalComingSoon" class="dashboard-grid is-hidden">
+      <section class="card chart-card chart-main placeholder-panel">
+        <div class="card-header">
+          <div>
+            <p class="section-label">Price Trend</p>
+            <h2 id="comingSoonHistoryTitle">Coming soon</h2>
+          </div>
+          <label class="pill-select">
+            <span>Window</span>
+            <select disabled>
+              <option>90D</option>
+            </select>
+          </label>
+        </div>
+        <div class="chart-frame chart-frame-large placeholder-frame">
+          <p id="comingSoonHistoryText" class="muted-text placeholder-copy">This metal price trend dashboard is in progress.</p>
+        </div>
+      </section>
+
+      <section class="card forecast-panel placeholder-panel">
+        <div class="card-header">
+          <div>
+            <p class="section-label">Forecast</p>
+            <h2 id="comingSoonForecastTitle">Coming soon</h2>
+          </div>
+        </div>
+        <p id="comingSoonForecastText" class="muted-text forecast-intro placeholder-copy">Forecasting will appear here in a later update.</p>
+        <div class="forecast-cards placeholder-forecast"></div>
       </section>
     </main>
 
@@ -101,6 +138,6 @@
   </div>
 
   <div id="chartTooltip" class="chart-tooltip" aria-hidden="true"></div>
-  <script src="/static/dashboard.js?v=6" defer></script>
+  <script src="/static/dashboard.js?v=9" defer></script>
 </body>
 </html>

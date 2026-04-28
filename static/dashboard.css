@@ -13,6 +13,8 @@
   --gold: #b8860b;
   --gold-bright: #f0aa00;
   --gold-deep: #7c5a08;
+  --retail-accent: #9a4d00;
+  --retail-panel-bg: linear-gradient(180deg, rgba(255, 250, 241, 0.94), rgba(249, 236, 214, 0.96));
   --green: #2e7d32;
   --red: #b23a2b;
   --shadow: 0 18px 40px rgba(95, 72, 41, 0.12);
@@ -57,6 +59,8 @@ body.dark-mode {
   --gold: #f3c153;
   --gold-bright: #ffdd70;
   --gold-deep: #b88712;
+  --retail-accent: #ffd27a;
+  --retail-panel-bg: linear-gradient(180deg, rgba(31, 24, 12, 0.96), rgba(47, 33, 12, 0.94));
   --green: #67c48f;
   --red: #e9746f;
   --topbar-bg: rgba(22, 22, 22, 0.92);
@@ -105,6 +109,7 @@ body.dark-mode {
 .top-bar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 24px;
   padding: 18px 24px;
   background: var(--topbar-bg);
@@ -172,6 +177,8 @@ body.dark-mode {
   margin-left: auto;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 12px;
 }
 
@@ -185,6 +192,7 @@ body.dark-mode {
   border: 1px solid rgba(31, 26, 23, 0.12);
   border-radius: 999px;
   padding: 10px 14px;
+  min-width: 56px;
   background: rgba(255, 255, 255, 0.14);
   color: var(--text);
   font: inherit;
@@ -211,6 +219,7 @@ body.dark-mode {
   border: 0;
   border-radius: 999px;
   padding: 12px 18px;
+  min-height: 44px;
   background: linear-gradient(135deg, var(--gold) 0%, #d8a41f 100%);
   color: #fffaf0;
   font: inherit;
@@ -226,6 +235,7 @@ body.dark-mode {
   border: 1px solid rgba(31, 26, 23, 0.10);
   border-radius: 999px;
   padding: 12px 18px;
+  min-height: 44px;
   background: var(--secondary-button-bg);
   color: var(--text);
   font: inherit;
@@ -335,7 +345,7 @@ body.dark-mode {
 
 .hero-metrics-split {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
   align-items: stretch;
 }
@@ -366,6 +376,18 @@ body.dark-mode {
 
 .hero-price-secondary {
   color: var(--gold-deep);
+}
+
+.hero-price-retail {
+  color: var(--retail-accent);
+}
+
+.hero-price-panel-retail {
+  background: var(--retail-panel-bg);
+}
+
+.hero-retail-pill {
+  color: var(--retail-accent);
 }
 
 .hero-change-pill {
@@ -413,10 +435,35 @@ body.dark-mode {
   gap: 18px;
 }
 
+.is-hidden {
+  display: none !important;
+}
+
 .card {
   background: var(--panel-bg);
   border-radius: 34px;
   padding: 26px;
+}
+
+.placeholder-panel {
+  min-height: 320px;
+}
+
+.placeholder-copy,
+.dashboard-placeholder-copy {
+  max-width: 42ch;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.placeholder-frame,
+.placeholder-forecast {
+  display: grid;
+  place-items: center;
+}
+
+.placeholder-forecast {
+  min-height: 220px;
 }
 
 .card-header {
@@ -454,6 +501,7 @@ body.dark-mode {
   display: inline-flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
   padding: 10px 12px;
   border-radius: 999px;
   border: 1px solid var(--line);
@@ -465,6 +513,7 @@ body.dark-mode {
   background: transparent;
   font: inherit;
   color: var(--text);
+  min-width: 72px;
 }
 
 .chart-main {
@@ -644,7 +693,7 @@ svg {
   width: 100%;
   max-width: none;
   margin-inline: auto;
-  white-space: nowrap;
+  white-space: normal;
   text-align: center;
 }
 
@@ -655,14 +704,13 @@ svg {
   }
 
   .top-bar,
-  .hero-card {
-    grid-template-columns: 1fr;
-  }
-
-  .top-bar,
   .hero-metrics {
     flex-direction: column;
     align-items: start;
+  }
+
+  .top-bar {
+    gap: 18px;
   }
 
   .top-nav {
@@ -672,9 +720,12 @@ svg {
 
   .top-bar-actions {
     margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .hero-card {
+    grid-template-columns: 1fr;
     padding: 28px 24px;
   }
 
@@ -684,5 +735,163 @@ svg {
 
   .hero-metrics-split {
     grid-template-columns: 1fr;
+  }
+
+  .hero-symbol-card {
+    min-height: 180px;
+  }
+}
+
+@media (max-width: 720px) {
+  .chrome-shell-top {
+    padding-top: 16px;
+  }
+
+  .chrome-shell,
+  .page-shell {
+    padding-inline: 12px;
+  }
+
+  .page-shell {
+    padding-top: 16px;
+    padding-bottom: 36px;
+  }
+
+  .top-bar,
+  .card,
+  .about-panel {
+    padding: 18px;
+  }
+
+  .brand-block {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .brand-title {
+    font-size: 1.6rem;
+  }
+
+  .top-bar-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .top-bar-actions > .theme-switch {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .top-bar-actions > .primary-button,
+  .top-bar-actions > .secondary-button,
+  .top-bar-actions > button.primary-button {
+    width: 100%;
+  }
+
+  .hero-card {
+    padding: 20px 18px;
+    border-radius: 28px;
+    gap: 18px;
+  }
+
+  .hero-price-panel,
+  .hero-symbol-card,
+  .card,
+  .about-panel {
+    border-radius: 24px;
+  }
+
+  .hero-price {
+    font-size: clamp(1.8rem, 9vw, 2.5rem);
+  }
+
+  .hero-change-pill {
+    min-height: 48px;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+  }
+
+  .hero-symbol-card {
+    padding: 24px 16px;
+  }
+
+  .hero-symbol {
+    font-size: clamp(3rem, 18vw, 4.5rem);
+  }
+
+  .symbol-picker {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .symbol-pill {
+    width: 100%;
+    padding-inline: 10px;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .pill-select {
+    width: 100%;
+    justify-content: space-between;
+    border-radius: 18px;
+  }
+
+  .chart-main,
+  .forecast-panel {
+    min-height: auto;
+  }
+
+  .chart-frame-large {
+    min-height: 280px;
+  }
+
+  .forecast-cards,
+  .placeholder-forecast {
+    max-height: none;
+    min-height: 160px;
+    padding-right: 0;
+  }
+
+  .page-footer {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 520px) {
+  .brand-mark {
+    width: 44px;
+    height: 44px;
+    font-size: 1.4rem;
+    border-radius: 12px;
+  }
+
+  .brand-title {
+    font-size: 1.35rem;
+  }
+
+  .top-bar-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-price-label,
+  .forecast-note,
+  .about-text,
+  .placeholder-copy,
+  .dashboard-placeholder-copy {
+    font-size: 0.95rem;
+  }
+
+  .chart-frame-large {
+    min-height: 240px;
+  }
+
+  .footer-line-secondary {
+    font-size: 0.9rem;
   }
 }

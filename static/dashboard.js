@@ -2,6 +2,7 @@ const currency = {
   usd: new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }),
   inr: new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }),
 };
+const OUNCE_TO_GRAMS = 31.1034768;
 
 let latestSummary = null;
 let activeTooltipPointCleanup = null;
@@ -30,11 +31,60 @@ const metalSymbols = {
   XAG: { label: "Ag", name: "Silver" },
   XPT: { label: "Pt", name: "Platinum" },
 };
+const LIVE_DASHBOARD_SYMBOL = "XAU";
 
 let currentSymbol = localStorage.getItem("selectedMetal") || "XAU";
 
 function getSymbolMeta(symbol) {
   return metalSymbols[symbol] || metalSymbols.XAU;
+}
+
+function isLiveDashboardSymbol(symbol) {
+  return symbol === LIVE_DASHBOARD_SYMBOL;
+}
+
+function updateDashboardMode(symbol) {
+  const meta = getSymbolMeta(symbol);
+  const liveDashboard = isLiveDashboardSymbol(symbol);
+  const heroMetrics = document.getElementById("heroMetrics");
+  const heroComingSoon = document.getElementById("heroComingSoon");
+  const goldDashboard = document.getElementById("goldDashboard");
+  const metalComingSoon = document.getElementById("metalComingSoon");
+  const comingSoonHistoryTitle = document.getElementById("comingSoonHistoryTitle");
+  const comingSoonHistoryText = document.getElementById("comingSoonHistoryText");
+  const comingSoonForecastTitle = document.getElementById("comingSoonForecastTitle");
+  const comingSoonForecastText = document.getElementById("comingSoonForecastText");
+  const refreshButton = document.getElementById("refreshButton");
+
+  heroMetrics?.classList.toggle("is-hidden", !liveDashboard);
+  heroComingSoon?.classList.toggle("is-hidden", liveDashboard);
+  goldDashboard?.classList.toggle("is-hidden", !liveDashboard);
+  metalComingSoon?.classList.toggle("is-hidden", liveDashboard);
+
+  if (heroComingSoon) {
+    heroComingSoon.textContent = `${meta.name} dashboard coming soon.`;
+  }
+
+  if (comingSoonHistoryTitle) {
+    comingSoonHistoryTitle.textContent = "Coming soon";
+  }
+
+  if (comingSoonHistoryText) {
+    comingSoonHistoryText.textContent = `${meta.name} price history and charting will appear here in a later update.`;
+  }
+
+  if (comingSoonForecastTitle) {
+    comingSoonForecastTitle.textContent = "Coming soon";
+  }
+
+  if (comingSoonForecastText) {
+    comingSoonForecastText.textContent = `${meta.name} forecasting will appear here in a later update.`;
+  }
+
+  if (refreshButton) {
+    refreshButton.disabled = !liveDashboard;
+    refreshButton.textContent = `Refresh ${meta.label}`;
+  }
 }
 
 function setActiveSymbol(symbol) {
@@ -44,10 +94,7 @@ function setActiveSymbol(symbol) {
   const meta = getSymbolMeta(currentSymbol);
   document.getElementById("heroSymbol").textContent = meta.label;
   document.getElementById("historyTitle").textContent = `${meta.name} USD historical performance`;
-  const refreshButton = document.getElementById("refreshButton");
-  if (refreshButton) {
-    refreshButton.textContent = `Refresh ${meta.label}`;
-  }
+  updateDashboardMode(currentSymbol);
 
   document.querySelectorAll(".symbol-pill").forEach((button) => {
     button.classList.toggle("active", button.dataset.symbol === currentSymbol);
@@ -83,19 +130,53 @@ function toggleTheme() {
 function updateHeroPrice(summary) {
   const latest = summary?.latest;
   const change = summary?.change || {};
-  const usdPrice = document.getElementById("usdPrice");
-  const usdChange = document.getElementById("usdChange");
-  const inrPrice = document.getElementById("inrPrice");
-  const inrChange = document.getElementById("inrChange");
+  const usdOuncePrice = document.getElementById("usdOuncePrice");
+  const usdOunceChange = document.getElementById("usdOunceChange");
 
-  if (!usdPrice || !usdChange || !inrPrice || !inrChange) {
+  if (!usdOuncePrice || !usdOunceChange) {
     return;
   }
 
-  usdPrice.textContent = latest ? currency.usd.format(latest.price_per_gram_usd) : "--";
-  usdChange.innerHTML = formatChange(change.usd, currency.usd);
-  inrPrice.textContent = latest && latest.price_per_gram_inr != null ? currency.inr.format(latest.price_per_gram_inr) : "--";
-  inrChange.innerHTML = formatChange(change.inr, currency.inr);
+  const usdPerOunce = latest?.price_per_gram_usd != null
+    ? latest.price_per_gram_usd * OUNCE_TO_GRAMS
+    : null;
+  const usdOunceDelta = change.usd != null
+    ? change.usd * OUNCE_TO_GRAMS
+    : null;
+
+  usdOuncePrice.textContent = usdPerOunce != null ? currency.usd.format(usdPerOunce) : "--";
+  usdOunceChange.innerHTML = formatChange(usdOunceDelta, currency.usd);
+}
+
+function updateRetailPrice(payload) {
+  const retail24kPrice = document.getElementById("retail24kPrice");
+  const retail24kMeta = document.getElementById("retail24kMeta");
+  const retail22kPrice = document.getElementById("retail22kPrice");
+  const retail22kMeta = document.getElementById("retail22kMeta");
+
+  if (!retail24kPrice || !retail24kMeta || !retail22kPrice || !retail22kMeta) {
+    return;
+  }
+
+  if (!payload || payload.error || !payload.item) {
+    const message = payload?.error || "Retail price unavailable.";
+    retail24kPrice.textContent = "--";
+    retail24kMeta.textContent = message;
+    retail22kPrice.textContent = "--";
+    retail22kMeta.textContent = message;
+    return;
+  }
+
+  retail24kPrice.textContent = currency.inr.format(payload.item.price_per_gram_inr_24k);
+  retail24kMeta.textContent = `${payload.item.city} retail via NebulaAPI`;
+
+  if (payload.item.price_per_gram_inr_22k != null) {
+    retail22kPrice.textContent = currency.inr.format(payload.item.price_per_gram_inr_22k);
+    retail22kMeta.textContent = `${payload.item.city} retail via NebulaAPI`;
+  } else {
+    retail22kPrice.textContent = "--";
+    retail22kMeta.textContent = "22K retail price unavailable.";
+  }
 }
 
 function hideChartTooltip() {
@@ -280,6 +361,9 @@ function renderForecastCards(items) {
 
 // Loads the top summary cards.
 async function loadSummary() {
+  if (!isLiveDashboardSymbol(currentSymbol)) {
+    return;
+  }
   const summary = await fetchJson(`/api/summary?${getSymbolQuery()}`);
   const latest = summary.latest;
   latestSummary = summary;
@@ -289,6 +373,9 @@ async function loadSummary() {
 
 // Loads the historical chart and recent table data.
 async function loadHistory() {
+  if (!isLiveDashboardSymbol(currentSymbol)) {
+    return;
+  }
   const days = document.getElementById("historyWindow").value;
   const data = await fetchJson(`/api/history?days=${days}&${getSymbolQuery()}`);
   drawLineChart(
@@ -299,26 +386,35 @@ async function loadHistory() {
 }
 
 async function loadForecast() {
-  const result = await fetchJson(`/api/forecast?days=30&${getSymbolQuery()}`);
   const status = document.getElementById("forecastStatus");
 
   if (!status) {
     return;
   }
 
-  if (result.error) {
-    status.textContent = result.error;
+  if (!isLiveDashboardSymbol(currentSymbol)) {
+    status.textContent = "Forecast will launch with this dashboard.";
     renderForecastCards([]);
     return;
   }
 
-  const meta = getSymbolMeta(currentSymbol);
-  status.textContent = `Short-term projected ${meta.name.toLowerCase()} prices from the current forecasting model.`;
-  renderForecastCards(result.items || []);
+  status.textContent = "Forecasting will return in a later update.";
+  renderForecastCards([]);
+}
+
+async function loadRetailPrice() {
+  if (!isLiveDashboardSymbol(currentSymbol)) {
+    return;
+  }
+  const retail = await fetchJson(`/api/retail?${getSymbolQuery()}`);
+  updateRetailPrice(retail);
 }
 
 // Refreshes live pricing via the aggregation endpoint, then reloads the dashboard.
 async function refreshAggregation() {
+  if (!isLiveDashboardSymbol(currentSymbol)) {
+    return;
+  }
   const status = document.getElementById("refreshStatus");
   if (status) {
     const meta = getSymbolMeta(currentSymbol);
@@ -330,7 +426,7 @@ async function refreshAggregation() {
     if (status) {
       status.textContent = `Saved ${result.rows} row(s). Sources: ${result.sources.join(", ") || "n/a"}.`;
     }
-    await Promise.all([loadSummary(), loadHistory(), loadForecast()]);
+    await Promise.all([loadSummary(), loadHistory(), loadForecast(), loadRetailPrice()]);
   } catch (error) {
     if (status) {
       status.textContent = `Refresh failed: ${error.message}`;
@@ -352,13 +448,13 @@ async function initDashboard() {
       const symbol = pill.dataset.symbol;
       if (symbol && symbol !== currentSymbol) {
         setActiveSymbol(symbol);
-        Promise.all([loadSummary(), loadHistory(), loadForecast()]);
+        Promise.all([loadSummary(), loadHistory(), loadForecast(), loadRetailPrice()]);
       }
     });
   });
 
   try {
-    await Promise.all([loadSummary(), loadHistory(), loadForecast()]);
+    await Promise.all([loadSummary(), loadHistory(), loadForecast(), loadRetailPrice()]);
   } catch (error) {
     const status = document.getElementById("refreshStatus");
     if (status) {
