@@ -1,0 +1,15 @@
+name: Daily Price Aggregate
+
+on:
+  schedule:
+    - cron: "15 14 * * *"
+  workflow_dispatch:
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call deployed aggregate endpoint
+        run: |
+          curl --fail --show-error --silent --max-time 60 \
+            "${{ secrets.APP_URL }}/aggregate"
