@@ -2,7 +2,7 @@ name: Daily Price Aggregate
 
 on:
   schedule:
-    - cron: "15 14 * * *"
+    - cron: "30 18 * * *"
   workflow_dispatch:
 
 jobs:
