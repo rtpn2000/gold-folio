@@ -3,7 +3,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
@@ -123,7 +123,7 @@ def normalize_records(payload, symbol="XAU"):
 
 @app.get("/")
 def root():
-    return {"status": "Gold Dashboard Running", "dashboard": "/dashboard"}
+    return RedirectResponse(url="/dashboard")
 
 
 @app.get("/dashboard")
