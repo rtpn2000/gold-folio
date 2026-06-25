@@ -11,5 +11,10 @@ jobs:
     steps:
       - name: Call deployed aggregate endpoint
         run: |
-          curl --fail --show-error --silent --max-time 60 \
+          curl --fail --show-error --silent \
+            --retry 3 \
+            --retry-all-errors \
+            --retry-delay 20 \
+            --connect-timeout 30 \
+            --max-time 180 \
             "${{ secrets.APP_URL }}/aggregate"
