@@ -390,6 +390,11 @@ body.dark-mode {
   color: var(--retail-accent);
 }
 
+.hero-change-pill.stale {
+  color: var(--red);
+  background: rgba(178, 58, 43, 0.12);
+}
+
 .hero-change-pill {
   display: inline-flex;
   align-items: center;

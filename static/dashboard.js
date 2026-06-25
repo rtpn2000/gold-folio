@@ -167,16 +167,61 @@ function updateRetailPrice(payload) {
     return;
   }
 
+  const timestampLabel = formatRetailTimestamp(payload.item.timestamp);
+  const staleLabel = isStaleRetailTimestamp(payload.item.timestamp) ? "Stale quote" : "Updated";
+  const metaText = `${payload.item.city} retail via NebulaAPI · ${staleLabel}: ${timestampLabel}`;
+
   retail24kPrice.textContent = currency.inr.format(payload.item.price_per_gram_inr_24k);
-  retail24kMeta.textContent = `${payload.item.city} retail via NebulaAPI`;
+  retail24kMeta.textContent = metaText;
+  retail24kMeta.classList.toggle("stale", staleLabel === "Stale quote");
 
   if (payload.item.price_per_gram_inr_22k != null) {
     retail22kPrice.textContent = currency.inr.format(payload.item.price_per_gram_inr_22k);
-    retail22kMeta.textContent = `${payload.item.city} retail via NebulaAPI`;
+    retail22kMeta.textContent = metaText;
+    retail22kMeta.classList.toggle("stale", staleLabel === "Stale quote");
   } else {
     retail22kPrice.textContent = "--";
     retail22kMeta.textContent = "22K retail price unavailable.";
+    retail22kMeta.classList.remove("stale");
   }
+}
+
+function parseRetailTimestamp(timestamp) {
+  if (!timestamp) {
+    return null;
+  }
+
+  const normalized = typeof timestamp === "string" && /^\d{4}-\d{2}-\d{2}$/.test(timestamp)
+    ? `${timestamp}T00:00:00Z`
+    : timestamp;
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatRetailTimestamp(timestamp) {
+  const date = parseRetailTimestamp(timestamp);
+  if (!date) {
+    return "unknown time";
+  }
+
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
+}
+
+function isStaleRetailTimestamp(timestamp) {
+  const date = parseRetailTimestamp(timestamp);
+  if (!date) {
+    return true;
+  }
+
+  const thirtySixHours = 36 * 60 * 60 * 1000;
+  return Date.now() - date.getTime() > thirtySixHours;
 }
 
 function hideChartTooltip() {
